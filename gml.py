@@ -186,7 +186,7 @@ class Parser:
     # obj is object to add attribute to
     def _parse_attribute(self, obj):
         name = self._cur()
-        if not name.isalnum():
+        if not name.replace('_', '').isalnum():
             raise GMLParseError('[pos {}] attribute name is not alphanumeric: {}'.format(self._i, name))
         self._inc()
 

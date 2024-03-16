@@ -37,3 +37,6 @@ def write_csv_topology(filename, net_edges):
                 fdnms[8]: edge.distance if edge.distance is not None else '-',
                 fdnms[9]: edge.delay if edge.delay is not None else '-'
             })
+
+def write_csv_spanning_tree(delays, paths):
+    pass

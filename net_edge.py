@@ -1,18 +1,15 @@
 import math
 
-def calc_distance_km(gml_edge):    # based on formula from http://www.movable-type.co.uk/scripts/latlong.html
+def calc_distance_km(net_edge):    # based on formula from http://www.movable-type.co.uk/scripts/latlong.html
     def deg2rad(angle):
         return angle * math.pi / 180
     
     R = 6371    # Earth radius in km
 
-    try:
-        lat1 = deg2rad(getattr(gml_edge.source_node, 'Latitude'))
-        lat2 = deg2rad(getattr(gml_edge.target_node, 'Latitude'))
-        lon1 = deg2rad(getattr(gml_edge.source_node, 'Longitude'))
-        lon2 = deg2rad(getattr(gml_edge.target_node, 'Longitude'))
-    except AttributeError:
-        return None
+    lat1 = deg2rad(net_edge.src_node.lat)
+    lat2 = deg2rad(net_edge.tgt_node.lat)
+    lon1 = deg2rad(net_edge.src_node.lon)
+    lon2 = deg2rad(net_edge.tgt_node.lon)
 
     a = (
         math.pow(math.sin((lat2 - lat1) / 2), 2) +
@@ -26,19 +23,54 @@ def calc_distance_km(gml_edge):    # based on formula from http://www.movable-ty
     return round(d, 5)
 
 def calc_delay_mks(distance_km):
-    return None if distance_km is None else round(distance_km * 4.8, 5)
+    return round(distance_km * 4.8, 5)  # 4.8 is delay per km (in mks/km)
 
-class NetEdge:
-    def __init__(self, gml_edge):
-        self._gml_edge = gml_edge
-        self._src = gml_edge.source
-        self._tgt = gml_edge.target
-        self._distance = calc_distance_km(gml_edge)
-        self._delay = calc_delay_mks(self._distance)
+class NetNode:
+    meta = None
+
+    def __init__(self, gml_node):
+        self._id = getattr(gml_node, 'id')
+        self._lat = getattr(gml_node, 'Latitude')
+        self._lon = getattr(gml_node, 'Longitude')
+        self._label = getattr(gml_node, 'label')
+        self._edges = []
+
+    def add_edge(self, net_edge):
+        self._edges.append(net_edge)
 
     @property
-    def gml_edge(self):
-        return self._gml_edge
+    def id(self):
+        return self._id
+    
+    @property
+    def lat(self):
+        return self._lat
+    
+    @property
+    def lon(self):
+        return self._lon
+    
+    @property
+    def label(self):
+        return self._label
+    
+    @property
+    def edges(self):
+        return self._edges
+    
+    def __repr__(self):
+        return str(self._id) + ' (' + self._label + ')'
+
+class NetEdge:
+    def __init__(self, src_node, tgt_node, hyperlink = []):
+        self._src = src_node.id
+        self._tgt = tgt_node.id
+        self._src_node = src_node
+        self._tgt_node = tgt_node
+        self._hyperlink = hyperlink
+
+        self._distance = calc_distance_km(self)
+        self._delay = calc_delay_mks(self._distance)
     
     @property
     def distance(self):
@@ -55,3 +87,15 @@ class NetEdge:
     @property
     def tgt(self):
         return self._tgt
+    
+    @property
+    def src_node(self):
+        return self._src_node
+    
+    @property
+    def tgt_node(self):
+        return self._tgt_node
+    
+    @property
+    def hyperlink(self):
+        return self._hyperlink

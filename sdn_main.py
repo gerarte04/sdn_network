@@ -1,7 +1,7 @@
-from csv_handler import write_csv_topology
+from csv_handler import write_csv_topology, write_csv_spanning_tree
 import gml  # source: https://github.com/icasdri/gml.py
 import math
-from net_edge import NetEdge
+from net_edge import NetEdge, NetNode
 import sys
 from visualizer import visualize_network
 
@@ -48,71 +48,101 @@ def find_minimum_spanning_tree(net_edges):  # Kruskal's algorithm
 
     return tree_edges
 
-def find_closest_ways(net_edges, nodes_ids, id_src):    # Dijkstra's algorithm
-    class NetNode:
+def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm
+    class NodeInfo:
         visited = False
         mark = math.inf
         path_to = [id_src]
 
-        def __init__(self, id):
-            self._id = id
-            if id == id_src:
-                self.mark = 0
-        
-        @property
-        def id(self):
-            return self._id
-        
-        def __repr__(self):
-            return str(self._id)
+    for node in net_nodes:
+        node.meta = NodeInfo()
+        if node.id == id_src:
+            node.meta.mark = 0
 
-    net_nodes = [NetNode(id) for id in nodes_ids]
-    net_nodes = sorted(net_nodes, key = lambda n : (n.visited, n.mark))
+    net_nodes = sorted(net_nodes, key = lambda n: (n.meta.visited, n.meta.mark))
     cur_nodes = []
     next_nodes = [net_nodes[0]]
 
     while len(next_nodes) > 0:
         cur_nodes = next_nodes
         next_nodes = []
+
         for cur in cur_nodes:
-            if cur.id == 67:
-                print('fuck')
-            cur.visited = True
-            cur_edges = list(filter(lambda n: (n.src == cur.id or n.tgt == cur.id), net_edges))
+            cur.meta.visited = True
+            for edge in cur.edges:
+                neighbor = edge.tgt_node if edge.src == cur.id else edge.src_node
 
-            for edge in cur_edges:
-                if edge.delay is not None:
-                    neighbor = None
-                    if edge.src == cur.id:
-                        neighbor = next(n for n in net_nodes if edge.tgt == n.id)
-                    else:
-                        neighbor = next(n for n in net_nodes if edge.src == n.id)
+                if not neighbor.meta.visited:
+                    next_nodes.append(neighbor)
+                    new_mark = cur.meta.mark + edge.delay
 
-                    if not neighbor.visited:
-                        next_nodes.append(neighbor)
-                        new_mark = cur.mark + edge.delay
+                    if new_mark < neighbor.meta.mark:
+                        neighbor.meta.mark = new_mark
+                        neighbor.meta.path_to = cur.meta.path_to + edge.hyperlink + [neighbor.id]
 
-                        if new_mark < neighbor.mark:
-                            neighbor.mark = new_mark
-                            neighbor.path_to = cur.path_to + [neighbor.id]
-
-    return {n.id: round(n.mark, 5) for n in net_nodes}, {n.id: n.path_to for n in net_nodes}
+    return {n.id: round(n.meta.mark, 5) for n in net_nodes}, {n.id: n.meta.path_to for n in net_nodes}
 
 gml_parser = gml.Parser()
 gml_parser.load_gml(sys.argv[1])
 gml_parser.parse()
 
 gml_graph = gml_parser.graph
-net_edges = [NetEdge(edge) for edge in gml_graph.graph_edges]
-nodes_ids = list(gml_graph.graph_nodes.keys())
+gml_edges = gml_graph.graph_edges
+gml_nodes = gml_graph.graph_nodes
+
+net_nodes = []
+net_edges = []
+hyperlinked = {}
+
+for node in gml_nodes.values():
+    if hasattr(node, 'Latitude'):
+        net_nodes.append(NetNode(node))
+    else:
+        linked_edges = list(filter(lambda edge: edge.source == node.id or edge.target == node.id, gml_edges))
+        neighbors = [edge.source if edge.target == node.id else edge.target for edge in linked_edges]
+        hyperlinked[node.id] = neighbors
+
+for edge in gml_edges:
+    try:
+        src_node = next(n for n in net_nodes if n.id == edge.source)
+        tgt_node = next(n for n in net_nodes if n.id == edge.target)
+        new_edge = NetEdge(src_node, tgt_node)
+
+        net_edges.append(new_edge)
+        src_node.add_edge(new_edge)
+        tgt_node.add_edge(new_edge)
+    except StopIteration:
+        pass
+
+for e in hyperlinked.keys():
+    for i in range(len(hyperlinked[e])):
+        for j in range(i + 1, len(hyperlinked[e])):
+            try:
+                src_node = next(n for n in net_nodes if n.id == hyperlinked[e][i])
+                tgt_node = next(n for n in net_nodes if n.id == hyperlinked[e][j])
+                new_edge = NetEdge(src_node, tgt_node, hyperlink=[e])
+
+                net_edges.append(new_edge)
+                src_node.add_edge(new_edge)
+                tgt_node.add_edge(new_edge)
+            except StopIteration:
+                pass
 
 tree = find_minimum_spanning_tree(net_edges)
 
-dists, paths = find_closest_ways(tree, nodes_ids, 0)
+min_delays, min_paths = {}, {}
+max_delay = math.inf
 
-for i in dists.keys():
-    print(i, 'dist:', dists[i], 'path:', paths[i])
+for id in gml_nodes.keys():
+    delays, paths = find_closest_ways(net_nodes, id)
+    new_max_delay = max(delays.values())
+    if new_max_delay < max_delay:
+        min_delays = delays
+        min_paths = paths
+        max_delay = new_max_delay
 
-write_csv_topology('out/' + sys.argv[1].split('/')[1].replace('.gml', '') + '_topo.csv', net_edges)
+prefix = 'out/' + sys.argv[1].split('/')[1].replace('.gml', '')
+write_csv_topology(prefix + '_topo.csv', net_edges)
+write_csv_spanning_tree(prefix + '_routes.csv', min_delays, min_paths)
 
 visualize_network(net_edges, tree)

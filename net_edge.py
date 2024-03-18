@@ -30,9 +30,18 @@ class NetNode:
 
     def __init__(self, gml_node):
         self._id = getattr(gml_node, 'id')
-        self._lat = getattr(gml_node, 'Latitude')
-        self._lon = getattr(gml_node, 'Longitude')
-        self._label = getattr(gml_node, 'label')
+        try:
+            self._label = getattr(gml_node, 'label')
+        except AttributeError:
+            self._label = '-'
+
+        try:
+            self._lat = getattr(gml_node, 'Latitude')
+            self._lon = getattr(gml_node, 'Longitude')
+        except AttributeError:
+            self._lat = None
+            self._lon = None
+
         self._edges = []
 
     def add_edge(self, net_edge):
@@ -69,8 +78,12 @@ class NetEdge:
         self._tgt_node = tgt_node
         self._hyperlink = hyperlink
 
-        self._distance = calc_distance_km(self)
-        self._delay = calc_delay_mks(self._distance)
+        if src_node.lat is not None and tgt_node.lat is not None: 
+            self._distance = calc_distance_km(self)
+            self._delay = calc_delay_mks(self._distance)
+        else:
+            self._distance = None
+            self._delay = None
     
     @property
     def distance(self):

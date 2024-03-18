@@ -11,8 +11,8 @@ def visualize_network(net_edges, tree):
             path_effects = None
             if edge in tree:
                 color = 'Red'
-            if len(edge.hyperlink) > 0:
-                path_effects=[pe.Stroke(linewidth=3.5, foreground='Blue'), pe.Normal()]
+            # if len(edge.hyperlink) > 0:
+            #     path_effects=[pe.Stroke(linewidth=3.5, foreground='Blue'), pe.Normal()]
             plt.plot(x, y, lw=2, marker = 'o', path_effects=path_effects, color=color, mfc='White', mec='Black', mew='1.3')
 
             plt.text(x[0], y[0], edge.src_node.label + '(' + str(edge.src) + ')')

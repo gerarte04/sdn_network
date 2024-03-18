@@ -5,34 +5,78 @@ from net_edge import NetEdge, NetNode, calc_distance_km, calc_delay_mks
 import sys
 from visualizer import visualize_network
 
-def find_minimum_spanning_tree(net_nodes):  # Kruskal's algorithm
+def find_minimum_spanning_tree(net_nodes):  # Prim's algorithm
+    hyperlinked = {}
+    def dist_none(edge, cur_node):
+        if edge.distance is not None:
+            return edge.distance
+        
+        another = edge.tgt_node if edge.src == cur_node.id else edge.src_node
+        if cur_node.lat is None:
+            if another.lat is not None:
+                return calc_distance_km(hyperlinked[cur_node.id], another)
+            else:
+                hyperlinked[another.id] = hyperlinked[cur_node.id]
+        else:
+            hyperlinked[another.id] = cur_node
+        
+        return 0
+
     nodes_idx = [node.id for node in net_nodes]   # pool of free nodes indices
-    tree_edges = [min(net_nodes[nodes_idx[0]].edges, key=lambda e: 0 if e.distance is None else e.distance)]         # list of minimum spanning tree edges
-    nodes_idx.pop(0)
+    tree_edges = [min(net_nodes[0].edges, key=lambda e: 0 if e.distance is None else e.distance)]         # list of minimum spanning tree edges
     cur_nodes = [tree_edges[0].src_node, tree_edges[0].tgt_node]
+    nodes_idx.remove(tree_edges[0].src)
+    nodes_idx.remove(tree_edges[0].tgt)
 
     while len(nodes_idx) > 0:
         new_edge = cur_nodes[0].edges[0]
         first_node = cur_nodes[0]
         min_dist = math.inf
+        pop_indices = []
 
-        for node in cur_nodes:
-            dist_none = lambda e: 0 if e.distance is None else e.distance
-            new_edges = list(filter(lambda e: e not in tree_edges, node.edges))
-            min_edge = min(new_edges, key=dist_none)
-            if dist_none(min_edge) < min_dist:
-                min_dist = dist_none(min_edge)
-                new_edge = min_edge
-                first_node = node
+        for i in range(len(cur_nodes)):
+            new_edges = list(filter(lambda e: (e.src in nodes_idx) ^ (e.tgt in nodes_idx), cur_nodes[i].edges))
+
+            if len(new_edges) == 0:
+                pop_indices.append(i)
+            else:
+                min_edge = min(new_edges, key=lambda e: dist_none(e, cur_nodes[i]))
+                dist = dist_none(min_edge, cur_nodes[i])
+                if dist < min_dist:
+                    min_dist = dist
+                    new_edge = min_edge
+                    first_node = cur_nodes[i]
+
+        off = 0
+        for i in pop_indices:
+            cur_nodes.pop(i - off)
+            off += 1
 
         tree_edges.append(new_edge)
-        cur_nodes.remove(first_node)
-        nodes_idx.remove(first_node.id)
-        cur_nodes.append(new_edge.tgt_node if new_edge.src == first_node.id else new_edge.src_node)
+        new_node = new_edge.tgt_node if new_edge.src == first_node.id else new_edge.src_node
+        nodes_idx.remove(new_node.id)
+        
+        cur_nodes.append(new_node)
 
     return tree_edges 
 
 def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm
+    hyperlinked = {}
+    def delay_none(edge, cur_node):
+        if edge.delay is not None:
+            return edge.delay
+        
+        another = edge.tgt_node if edge.src == cur_node.id else edge.src_node
+        if cur_node.lat is None:
+            if another.lat is not None:
+                return calc_delay_mks(calc_distance_km(hyperlinked[cur_node.id], another))
+            else:
+                hyperlinked[another.id] = hyperlinked[cur_node.id]
+        else:
+            hyperlinked[another.id] = cur_node
+        
+        return 0
+
     class NodeInfo:
         visited = False
         mark = math.inf
@@ -58,11 +102,11 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm
 
                 if not neighbor.meta.visited:
                     next_nodes.append(neighbor)
-                    new_mark = cur.meta.mark + edge.delay
+                    new_mark = cur.meta.mark + delay_none(edge, cur)
 
                     if new_mark < neighbor.meta.mark:
                         neighbor.meta.mark = new_mark
-                        neighbor.meta.path_to = cur.meta.path_to + edge.hyperlink + [neighbor.id]
+                        neighbor.meta.path_to = cur.meta.path_to + [neighbor.id]
 
     return {n.id: round(n.meta.mark, 5) for n in net_nodes}, {n.id: n.meta.path_to for n in net_nodes}
 
@@ -75,7 +119,6 @@ gml_edges = gml_graph.graph_edges
 gml_nodes = gml_graph.graph_nodes
 
 net_edges = []
-hyperlinked = {}
 
 net_nodes = [NetNode(node) for node in gml_nodes.values()]
 
@@ -90,16 +133,29 @@ for edge in gml_edges:
 
 tree = find_minimum_spanning_tree(net_nodes)
 
+# for node in net_nodes:
+#     pop_indices = []
+#     for i in range(len(node.edges)):
+#         if node.edges[i] not in tree:
+#             print(node.edges[i].src, node.edges[i].tgt)
+#             pop_indices.append(i)
+
+#     off = 0
+#     for i in pop_indices:
+#         node.pop_edge(i - off)
+#         off += 1
+
 min_delays, min_paths = {}, {}
 max_delay = math.inf
 
 for id in gml_nodes.keys():
-    delays, paths = find_closest_ways(net_nodes, id)
-    new_max_delay = max(delays.values())
-    if new_max_delay < max_delay:
-        min_delays = delays
-        min_paths = paths
-        max_delay = new_max_delay
+    if hasattr(gml_nodes[id], 'Latitude'):
+        delays, paths = find_closest_ways(net_nodes, id)
+        new_max_delay = max(delays.values())
+        if new_max_delay < max_delay:
+            min_delays = delays
+            min_paths = paths
+            max_delay = new_max_delay
 
 prefix = 'out/' + sys.argv[1].split('/')[1].replace('.gml', '')
 write_csv_topology(prefix + '_topo.csv', net_edges)

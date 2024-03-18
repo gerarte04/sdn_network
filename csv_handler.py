@@ -12,8 +12,9 @@ def write_csv_topology(filename, net_edges):
 
         writer = csv.DictWriter(file, fieldnames=fdnms)
 
+        none_val = lambda v: '<hyperedge>' if v is None else v
         for edge in net_edges:
-            writer.writerow({
+            row = {
                 fdnms[0]: edge.src,
                 fdnms[1]: edge.src_node.label,
                 fdnms[2]: edge.src_node.lon,
@@ -24,7 +25,9 @@ def write_csv_topology(filename, net_edges):
                 fdnms[7]: edge.tgt_node.lat,
                 fdnms[8]: edge.distance,
                 fdnms[9]: edge.delay
-            })
+            }
+            row = {k: none_val(row[k]) for k in row.keys()}
+            writer.writerow(row)
 
 def write_csv_spanning_tree(filename, delays, paths):
     delays = dict(sorted(delays.items()))

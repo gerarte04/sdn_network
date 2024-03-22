@@ -19,9 +19,6 @@ Node 1 (id),Node 1 (label),Node 1 (longitude),Node 1 (latitude),Node 2 (id),Node
 10,Houston,-95.36327,29.76328,13,Dallas,-96.80667,32.78306,362.71141,1741.01477
 10,Houston,-95.36327,29.76328,14,Austin,-97.74306,30.26715,235.8781,1132.21488
 10,Houston,-95.36327,29.76328,20,Phoenix,-112.07404,33.44838,1632.66341,7836.78437
-11,None,<hyperedge>,<hyperedge>,13,Dallas,-96.80667,32.78306,<hyperedge>,<hyperedge>
-11,None,<hyperedge>,<hyperedge>,21,Denver,-104.9847,39.73915,<hyperedge>,<hyperedge>
-11,None,<hyperedge>,<hyperedge>,22,Chicago,-87.65005,41.85003,<hyperedge>,<hyperedge>
 13,Dallas,-96.80667,32.78306,14,Austin,-97.74306,30.26715,293.49326,1408.76765
 15,Seattle,-122.33207,47.60621,16,Portland,-122.67621,45.52345,233.08126,1118.79005
 15,Seattle,-122.33207,47.60621,22,Chicago,-87.65005,41.85003,2788.66264,13385.58067

@@ -20,27 +20,23 @@ def calc_distance_km(src_node, tgt_node):    # based on formula from http://www.
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     d = R * c
 
-    return round(d, 5)
+    return round(d, 2)
 
 def calc_delay_mks(distance_km):
-    return round(distance_km * 4.8, 5)  # 4.8 is delay per km (in mks/km)
+    return round(distance_km * 4.8)  # 4.8 is delay per km (in mks/km)
 
 class NetNode:
     meta = None
 
     def __init__(self, gml_node):
         self._id = getattr(gml_node, 'id')
+        self._lat = getattr(gml_node, 'Latitude')
+        self._lon = getattr(gml_node, 'Longitude')
+
         try:
             self._label = getattr(gml_node, 'label')
         except AttributeError:
             self._label = '-'
-
-        try:
-            self._lat = getattr(gml_node, 'Latitude')
-            self._lon = getattr(gml_node, 'Longitude')
-        except AttributeError:
-            self._lat = None
-            self._lon = None
 
         self._edges = []
 
@@ -71,7 +67,7 @@ class NetNode:
         return self._edges
     
     def __repr__(self):
-        return str(self._id) + ' (' + self._label + ')'
+        return self._label + '(' + str(self._id) + ')'
 
 class NetEdge:
     def __init__(self, src_node, tgt_node):
@@ -80,12 +76,8 @@ class NetEdge:
         self._src_node = src_node
         self._tgt_node = tgt_node
 
-        if src_node.lat is not None and tgt_node.lat is not None: 
-            self._distance = calc_distance_km(self._src_node, self._tgt_node)
-            self._delay = calc_delay_mks(self._distance)
-        else:
-            self._distance = None
-            self._delay = None
+        self._distance = calc_distance_km(self._src_node, self._tgt_node)
+        self._delay = calc_delay_mks(self._distance)
     
     @property
     def distance(self):
@@ -111,3 +103,5 @@ class NetEdge:
     def tgt_node(self):
         return self._tgt_node
 
+    def __repr__(self):
+        return '(' + str(self._src) + ',' + str(self._tgt) + ')'

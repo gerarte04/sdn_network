@@ -165,11 +165,6 @@ graph [
     Latitude 25.8
   ]
   node [
-    id 17
-    label "San Miguel"
-    Internal 1
-  ]
-  node [
     id 18
     label "Monterrey"
     Country "Mexico"
@@ -424,28 +419,12 @@ graph [
     Latitude 25.55
   ]
   node [
-    id 49
-    label "Tilden"
-    Country "United States"
-    Longitude -98.54918
-    Internal 1
-    Latitude 28.46194
-  ]
-  node [
     id 50
     label "San Isidro"
     Country "United States"
     Longitude -98.4539
     Internal 1
     Latitude 26.71672
-  ]
-  node [
-    id 51
-    label "Hebbronville"
-    Country "United States"
-    Longitude -98.67835
-    Internal 1
-    Latitude 27.30671
   ]
   node [
     id 52
@@ -568,34 +547,12 @@ graph [
     Latitude 20.21667
   ]
   node [
-    id 67
-    label "MA"
-    Country "United States"
-    Longitude -99.00114
-    Internal 1
-    Latitude 27.43975
-  ]
-  node [
-    id 68
-    label "None"
-    hyperedge 1
-    Internal 1
-  ]
-  node [
     id 69
     label "Laredo"
     Country "Mexico"
     Longitude -99.51667
     Internal 1
     Latitude 27.5
-  ]
-  node [
-    id 70
-    label "Mirando City"
-    Country "United States"
-    Longitude -99.00114
-    Internal 1
-    Latitude 27.43975
   ]
   node [
     id 71
@@ -605,14 +562,6 @@ graph [
     Internal 1
     Longitude -105.51667
     Latitude 23.73333
-  ]
-  node [
-    id 72
-    label "Alice"
-    Country "United States"
-    Longitude -98.06972
-    Internal 1
-    Latitude 27.75225
   ]
   node [
     id 73

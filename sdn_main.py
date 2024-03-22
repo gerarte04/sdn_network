@@ -1,9 +1,11 @@
+#! /bin/python3
+import argparse
 from csv_handler import write_csv_topology, write_csv_spanning_tree
 import gml  # source: https://github.com/icasdri/gml.py
 import math
 from net_edge import NetEdge, NetNode, calc_distance_km, calc_delay_mks
-import sys
 from visualizer import visualize_network
+from time import time
 
 def find_minimum_spanning_tree(net_nodes):  # Prim's algorithm
     hyperlinked = {}
@@ -60,7 +62,7 @@ def find_minimum_spanning_tree(net_nodes):  # Prim's algorithm
 
     return tree_edges 
 
-def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm
+def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with multi-buckets improvement
     hyperlinked = {}
     def delay_none(edge, cur_node):
         if edge.delay is not None:
@@ -82,36 +84,50 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm
         mark = math.inf
         path_to = [id_src]
 
+    buckets = {math.inf: []}
     for node in net_nodes:
         node.meta = NodeInfo()
         if node.id == id_src:
             node.meta.mark = 0
+            buckets[0] = [node]
+        else:
+            buckets[math.inf].append(node)
 
-    net_nodes = sorted(net_nodes, key = lambda n: (n.meta.visited, n.meta.mark))
-    cur_nodes = []
-    next_nodes = [net_nodes[0]]
+    L = 0
+    total = len(net_nodes)
 
-    while len(next_nodes) > 0:
-        cur_nodes = next_nodes
-        next_nodes = []
+    while total > 0:
+        L = min(buckets.keys(), key=lambda k: k if len(buckets[k]) > 0 else math.inf)
+        cur = buckets[L][0]
+        buckets[L].pop(0)
+        cur.meta.visited = True
+        total -= 1
 
-        for cur in cur_nodes:
-            cur.meta.visited = True
-            for edge in cur.edges:
-                neighbor = edge.tgt_node if edge.src == cur.id else edge.src_node
+        for edge in cur.edges:
+            neighbor = edge.tgt_node if edge.src == cur.id else edge.src_node
 
-                if not neighbor.meta.visited:
-                    next_nodes.append(neighbor)
-                    new_mark = cur.meta.mark + delay_none(edge, cur)
+            if not neighbor.meta.visited:
+                new_mark = cur.meta.mark + delay_none(edge, cur)
 
-                    if new_mark < neighbor.meta.mark:
-                        neighbor.meta.mark = new_mark
-                        neighbor.meta.path_to = cur.meta.path_to + [neighbor.id]
+                if new_mark < neighbor.meta.mark:
+                    buckets[neighbor.meta.mark].remove(neighbor)
+                    neighbor.meta.mark = new_mark
+                    neighbor.meta.path_to = cur.meta.path_to + [neighbor.id]
+                    if new_mark not in buckets.keys():
+                        buckets[new_mark] = [neighbor]
+                    else:
+                        buckets[new_mark].append(neighbor)
 
     return {n.id: round(n.meta.mark, 5) for n in net_nodes}, {n.id: n.meta.path_to for n in net_nodes}
 
+arg_parser = argparse.ArgumentParser(prog='SDN')
+arg_parser.add_argument('-t', '--topology', required=True)
+arg_parser.add_argument('-k', '--criteria', default=1)
+arg_parser.add_argument('-v', '--vis', action='store_true')
+args = arg_parser.parse_args()
+
 gml_parser = gml.Parser()
-gml_parser.load_gml(sys.argv[1])
+gml_parser.load_gml(args.topology)
 gml_parser.parse()
 
 gml_graph = gml_parser.graph
@@ -131,23 +147,26 @@ for edge in gml_edges:
     src_node.add_edge(new_edge)
     tgt_node.add_edge(new_edge)
 
-tree = find_minimum_spanning_tree(net_nodes)
+tree = []
 
-# for node in net_nodes:
-#     pop_indices = []
-#     for i in range(len(node.edges)):
-#         if node.edges[i] not in tree:
-#             print(node.edges[i].src, node.edges[i].tgt)
-#             pop_indices.append(i)
+if args.criteria == '2':
+    tree = find_minimum_spanning_tree(net_nodes)
 
-#     off = 0
-#     for i in pop_indices:
-#         node.pop_edge(i - off)
-#         off += 1
+    for node in net_nodes:
+        pop_indices = []
+        for i in range(len(node.edges)):
+            if node.edges[i] not in tree:
+                pop_indices.append(i)
+
+        off = 0
+        for i in pop_indices:
+            node.pop_edge(i - off)
+            off += 1
 
 min_delays, min_paths = {}, {}
 max_delay = math.inf
 
+start = time()
 for id in gml_nodes.keys():
     if hasattr(gml_nodes[id], 'Latitude'):
         delays, paths = find_closest_ways(net_nodes, id)
@@ -156,9 +175,11 @@ for id in gml_nodes.keys():
             min_delays = delays
             min_paths = paths
             max_delay = new_max_delay
+print(time() - start)
 
-prefix = 'out/' + sys.argv[1].split('/')[1].replace('.gml', '')
+prefix = 'out/' + args.topology.split('/')[-1].replace('.gml', '')
 write_csv_topology(prefix + '_topo.csv', net_edges)
 write_csv_spanning_tree(prefix + '_routes.csv', min_delays, min_paths)
 
-visualize_network(net_edges, tree)
+if args.vis:
+    visualize_network(net_edges, tree)

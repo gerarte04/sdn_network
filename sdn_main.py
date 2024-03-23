@@ -61,7 +61,7 @@ min_delays, min_paths = {}, {}
 max_delay = math.inf
 start = time()
 
-for _, id in tqdm(enumerate(gml_nodes.keys())):
+for _, id in tqdm(enumerate([node.id for node in net_nodes])):
     delays, paths = find_closest_ways(net_nodes, id)
     new_max_delay = max(delays.values())
     if new_max_delay < max_delay:

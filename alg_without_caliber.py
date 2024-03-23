@@ -38,47 +38,30 @@ def find_minimum_spanning_tree(net_nodes):  # Prim's algorithm
 
     return tree_edges
 
-def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with buckets and caliber
+def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with multi-buckets improvement
     class NodeInfo:
         visited = False
-        in_bucket = False
         mark = math.inf
         path_to = [id_src]
 
-    mu = 0
-    def caliber(node):
-        return min(node.edges, key=lambda e: e.delay).delay
-    def lemma(node):
-        return mu + caliber(node) >= node.meta.mark
-
-    buckets = {}
-    exact = []
-    routes = []
+    buckets = {math.inf: []}
     for node in net_nodes:
         node.meta = NodeInfo()
         if node.id == id_src:
             node.meta.mark = 0
-            exact.append(node)
-            routes.append(node.meta.mark)
+            buckets[0] = [node]
+        else:
+            buckets[math.inf].append(node)
 
     L = 0
     total = len(net_nodes)
 
     while total > 0:
-        if len(exact) > 0:
-            cur = exact[0]
-            exact.pop(0)
-        else:
-            L = min(buckets.keys())
-            cur = buckets[L][0]
-            buckets[L].pop(0)
-            if len(buckets[L]) == 0:
-                buckets.pop(L)
-        
+        L = min(buckets.keys(), key=lambda k: k if len(buckets[k]) > 0 else math.inf)
+        cur = buckets[L][0]
+        buckets[L].pop(0)
         cur.meta.visited = True
         total -= 1
-        mu = min(routes)
-        routes.remove(cur.meta.mark)
 
         for edge in cur.edges:
             neighbor = edge.tgt_node if edge.src == cur.id else edge.src_node
@@ -87,23 +70,12 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with buckets
                 new_mark = cur.meta.mark + edge.delay
 
                 if new_mark < neighbor.meta.mark:
-                    if neighbor.meta.in_bucket:
-                        buckets[neighbor.meta.mark].remove(neighbor)
-                        if len(buckets[neighbor.meta.mark]) == 0:
-                            buckets.pop(neighbor.meta.mark)
-
+                    buckets[neighbor.meta.mark].remove(neighbor)
                     neighbor.meta.mark = new_mark
                     neighbor.meta.path_to = cur.meta.path_to + [neighbor.id]
-                    routes.append(new_mark)
-
-                    if lemma(neighbor):
-                        neighbor.meta.in_bucket = False
-                        exact.append(neighbor)
+                    if new_mark not in buckets.keys():
+                        buckets[new_mark] = [neighbor]
                     else:
-                        neighbor.meta.in_bucket = True
-                        if new_mark not in buckets.keys():
-                            buckets[new_mark] = [neighbor]
-                        else:
-                            buckets[new_mark].append(neighbor)
+                        buckets[new_mark].append(neighbor)
 
     return {n.id: round(n.meta.mark, 5) for n in net_nodes}, {n.id: n.meta.path_to for n in net_nodes}

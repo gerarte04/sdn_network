@@ -1,4 +1,5 @@
 import math
+from time import time
 
 def find_minimum_spanning_tree(net_nodes):  # Prim's algorithm
     nodes_idx = [node.id for node in net_nodes]
@@ -45,19 +46,19 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with multi-b
         path_to = [id_src]
 
     STEP = 1000
-    MAX = 100000
+    MAX = 30000
     def scnd_idx(mark):
         div = math.inf if mark == math.inf else mark - mark % STEP
         return MAX if div > MAX else div
 
-    buckets = {i: {j: [] for j in range(i, i + STEP)} for i in range(0, MAX + 1, STEP)}
+    buckets = {i: {} for i in range(0, MAX + 1, STEP)}
     buckets[MAX][math.inf] = []
 
     for node in net_nodes:
         node.meta = NodeInfo()
         if node.id == id_src:
             node.meta.mark = 0
-            buckets[0][0].append(node)
+            buckets[0][0] = [node]
         else:
             buckets[MAX][math.inf].append(node)
 
@@ -65,7 +66,7 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with multi-b
     total = len(net_nodes)
 
     while total > 0 and lb <= MAX:
-        if len(buckets[lb][lt]) == 0:
+        if lt not in buckets[lb] or len(buckets[lb][lt]) == 0:
             lt += 1
             if lt >= lb + STEP:
                 lb += STEP
@@ -87,6 +88,10 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with multi-b
                     buckets[scnd_idx(neighbor.meta.mark)][neighbor.meta.mark].remove(neighbor)
                     neighbor.meta.mark = new_mark
                     neighbor.meta.path_to = cur.meta.path_to + [neighbor.id]
-                    buckets[scnd_idx(new_mark)][new_mark].append(neighbor)
+                    scnd = scnd_idx(new_mark)
+                    if new_mark not in buckets[scnd]:
+                        buckets[scnd][new_mark] = [neighbor]
+                    else:
+                        buckets[scnd][new_mark].append(neighbor)
 
     return {n.id: round(n.meta.mark, 5) for n in net_nodes}, {n.id: n.meta.path_to for n in net_nodes}

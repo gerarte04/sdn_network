@@ -44,6 +44,7 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with buckets
         in_bucket = False
         mark = math.inf
         path_to = [id_src]
+        branch = []
 
     mu = 0
     def caliber(node):
@@ -69,6 +70,8 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with buckets
             cur = exact[0]
             exact.pop(0)
         else:
+            if len(buckets.keys()) == 0:
+                raise RuntimeError('there is probably several connectivity components')
             L = min(buckets.keys())
             cur = buckets[L][0]
             buckets[L].pop(0)
@@ -94,6 +97,7 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with buckets
 
                     neighbor.meta.mark = new_mark
                     neighbor.meta.path_to = cur.meta.path_to + [neighbor.id]
+                    neighbor.meta.branch = cur.meta.branch + [edge]
                     routes.append(new_mark)
 
                     if lemma(neighbor):
@@ -106,4 +110,8 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with buckets
                         else:
                             buckets[new_mark].append(neighbor)
 
-    return {n.id: round(n.meta.mark, 5) for n in net_nodes}, {n.id: n.meta.path_to for n in net_nodes}
+    delays = {n.id: round(n.meta.mark, 5) for n in net_nodes if n.meta.mark > 0}
+    paths = {n.id: n.meta.path_to for n in net_nodes if len(n.meta.path_to) > 1}
+    branches = {n.id: n.meta.branch for n in net_nodes if len(n.meta.branch) > 0}
+
+    return delays, paths, branches

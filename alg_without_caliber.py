@@ -43,6 +43,7 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with multi-b
         visited = False
         mark = math.inf
         path_to = [id_src]
+        branch = []
 
     buckets = {math.inf: []}
     for node in net_nodes:
@@ -57,6 +58,8 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with multi-b
     total = len(net_nodes)
 
     while total > 0:
+        if len(buckets.keys()) == 0:
+            raise RuntimeError('there is probably several connectivity components')
         L = min(buckets.keys(), key=lambda k: k if len(buckets[k]) > 0 else math.inf)
         cur = buckets[L][0]
         buckets[L].pop(0)
@@ -73,9 +76,14 @@ def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with multi-b
                     buckets[neighbor.meta.mark].remove(neighbor)
                     neighbor.meta.mark = new_mark
                     neighbor.meta.path_to = cur.meta.path_to + [neighbor.id]
+                    neighbor.meta.branch = cur.meta.branch + [edge]
                     if new_mark not in buckets.keys():
                         buckets[new_mark] = [neighbor]
                     else:
                         buckets[new_mark].append(neighbor)
 
-    return {n.id: round(n.meta.mark, 5) for n in net_nodes}, {n.id: n.meta.path_to for n in net_nodes}
+    delays = {n.id: round(n.meta.mark, 5) for n in net_nodes if n.meta.mark > 0}
+    paths = {n.id: n.meta.path_to for n in net_nodes if len(n.meta.path_to) > 1}
+    branches = {n.id: n.meta.branch for n in net_nodes if len(n.meta.branch) > 0}
+
+    return delays, paths, branches

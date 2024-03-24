@@ -41,15 +41,13 @@ for edge in gml_edges:
     src_node.add_edge(new_edge)
     tgt_node.add_edge(new_edge)
 
-tree = []
-
 if args.criteria == '2':
-    tree = find_minimum_spanning_tree(net_nodes)
+    min_tree = find_minimum_spanning_tree(net_nodes)
 
     for node in net_nodes:
         pop_indices = []
         for i in range(len(node.edges)):
-            if node.edges[i] not in tree:
+            if node.edges[i] not in min_tree:
                 pop_indices.append(i)
 
         off = 0
@@ -57,17 +55,18 @@ if args.criteria == '2':
             node.pop_edge(i - off)
             off += 1
 
-min_delays, min_paths = {}, {}
+min_delays, min_paths, min_branches = {}, {}, {}
+controller = None
 max_delay = math.inf
 start = time()
 
-for _, id in tqdm(enumerate([node.id for node in net_nodes])):
-    delays, paths = find_closest_ways(net_nodes, id)
+for _, node in tqdm(enumerate(net_nodes)):
+    delays, paths, branches = find_closest_ways(net_nodes, node.id)
     new_max_delay = max(delays.values())
     if new_max_delay < max_delay:
-        min_delays = delays
-        min_paths = paths
+        min_delays, min_paths, min_branches = delays, paths, branches
         max_delay = new_max_delay
+        controller = node
 
 print('time:', time() - start)
 
@@ -76,4 +75,8 @@ write_csv_topology(prefix + '_topo.csv', net_edges)
 write_csv_spanning_tree(prefix + '_routes.csv', min_delays, min_paths)
 
 if args.vis:
-    visualize_network(net_edges, tree)
+    tree = set()
+    for b in min_branches.values():
+        tree.update(b)
+
+    visualize_network(net_edges, tree, controller)

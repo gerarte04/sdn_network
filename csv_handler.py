@@ -6,13 +6,13 @@ def write_csv_topology(filename, net_edges):
     with open(filename, mode='w') as file:
         fdnms = ['Node 1 (id)', 'Node 1 (label)', 'Node 1 (longitude)', 'Node 1 (latitude)',
                  'Node 2 (id)', 'Node 2 (label)', 'Node 2 (longitude)', 'Node 2 (latitude)',
-                 'Distance (km)', 'Delay (mks)']
+                 'Distance (km)', 'Delay (mks)']        # список атрибутов ребер
         writer = csv.writer(file)
         writer.writerow(fdnms)
 
         writer = csv.DictWriter(file, fieldnames=fdnms)
 
-        for edge in net_edges:
+        for edge in net_edges:      # записываем для каждого ребра строку со значениями атрибутов
             row = {
                 fdnms[0]: edge.src,
                 fdnms[1]: edge.src_node.label,

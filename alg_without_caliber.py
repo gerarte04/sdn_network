@@ -38,7 +38,7 @@ def find_minimum_spanning_tree(net_nodes):  # Prim's algorithm
 
     return tree_edges
 
-def find_closest_ways(net_nodes, id_src):    # Dijkstra's algorithm with multi-buckets improvement
+def find_closest_ways(net_nodes, id_src):    # алгоритм Дейкстры с одноуровневыми корзинами без калибровки
     class NodeInfo:
         visited = False
         mark = math.inf

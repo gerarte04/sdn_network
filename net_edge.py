@@ -1,10 +1,10 @@
 import math
 
-def calc_distance_km(src_node, tgt_node):    # based on formula from http://www.movable-type.co.uk/scripts/latlong.html
+def calc_distance_km(src_node, tgt_node):    # основано на формуле http://www.movable-type.co.uk/scripts/latlong.html
     def deg2rad(angle):
         return angle * math.pi / 180
     
-    R = 6371    # Earth radius in km
+    R = 6371    # радиус Земли в км
 
     lat1 = deg2rad(src_node.lat)
     lat2 = deg2rad(tgt_node.lat)
@@ -20,12 +20,12 @@ def calc_distance_km(src_node, tgt_node):    # based on formula from http://www.
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     d = R * c
 
-    return round(d, 2)
+    return round(d, 2)      # отбросим погрешность в 5 метров
 
-def calc_delay_mks(distance_km):
-    return round(distance_km * 4.8)  # 4.8 is delay per km (in mks/km)
+def calc_delay_mks(distance_km):     # для удобства округлим задержку до целого значения
+    return round(distance_km * 4.8)  # 4.8 - задержка на километр
 
-class NetNode:
+class NetNode:      # класс узла
     meta = None
 
     def __init__(self, gml_node):
@@ -38,7 +38,7 @@ class NetNode:
         except AttributeError:
             self._label = '-'
 
-        self._edges = []
+        self._edges = []    # ребра, инцидентные данному узлу (ссылки на объекты класса NetEdge)
 
     def add_edge(self, net_edge):
         self._edges.append(net_edge)
@@ -69,11 +69,11 @@ class NetNode:
     def __repr__(self):
         return self._label + '(' + str(self._id) + ')'
 
-class NetEdge:
+class NetEdge:      # класс ребра
     def __init__(self, src_node, tgt_node):
         self._src = src_node.id
         self._tgt = tgt_node.id
-        self._src_node = src_node
+        self._src_node = src_node   # концы ребра (ссылки на объекты класса NetNode)
         self._tgt_node = tgt_node
 
         self._distance = calc_distance_km(self._src_node, self._tgt_node)

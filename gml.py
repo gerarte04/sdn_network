@@ -86,6 +86,14 @@ class Parser:
         with open(path) as infile:
             # NOTE: the split will destroy any spaces in string attributes
             self._raw = infile.read().strip().split()
+            j = 0
+            l = len(self._raw)
+            while j < l:
+                if (self._raw[j].startswith('"') and not self._raw[j].endswith('"')) or self._raw[j] == '"':
+                    self._raw = self._raw[:j] + [self._raw[j] + ' ' + self._raw[j + 1]] + self._raw[j + 2:]
+                    l -= 1
+                else:
+                    j += 1
 
         self._i = 0
         self.graph = Graph()
@@ -191,12 +199,14 @@ class Parser:
         self._inc()
 
         val = self._cur()
+        #print(val)
         try:
             # try to parse val as int
-            val = int(val, 10)
-            self._inc()
-            setattr(obj, name, val)
-            return
+            if not val.startswith('"'):
+                val = int(val, 10)
+                self._inc()
+                setattr(obj, name, val)
+                return
         except ValueError:
             pass
 
